@@ -9,6 +9,7 @@ A production-grade Retrieval-Augmented Generation (RAG) system purpose-built for
 - [Overview](#overview)
 - [System Architecture](#system-architecture)
 - [Technology Stack](#technology-stack)
+- [Comparison with Existing Approaches](#comparison-with-existing-approaches)
 - [Key Features](#key-features)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
@@ -144,6 +145,160 @@ An entirely offline batch job that validates system quality against a version-co
 | Observability | Prometheus + LangSmith | Metrics dashboards and LLM tracing |
 | API | FastAPI + Uvicorn | Optional REST endpoint |
 | Configuration | Pydantic Settings | Type-safe environment management |
+
+### Full Dependency Reference
+
+All packages are pinned in `requirements.txt`. The table below lists every library used in the project with its official name, pinned version, and the specific role it plays in the system.
+
+#### Orchestration & LLM Integration
+
+| Package | Version | Official Source | Role in This Project |
+|---|---|---|---|
+| `langchain` | 0.1.20 | [pypi.org/project/langchain](https://pypi.org/project/langchain/) | Core chain abstractions, LCEL pipeline composition, callback system |
+| `langchain-openai` | 0.1.7 | [pypi.org/project/langchain-openai](https://pypi.org/project/langchain-openai/) | `ChatOpenAI` (GPT-4 Turbo generation), `OpenAIEmbeddings` (dense vectors) |
+| `langchain-community` | 0.0.38 | [pypi.org/project/langchain-community](https://pypi.org/project/langchain-community/) | Document loaders, community integrations |
+| `langchain-experimental` | (transitive) | [pypi.org/project/langchain-experimental](https://pypi.org/project/langchain-experimental/) | `SemanticChunker` — embedding-based boundary detection for chunking |
+
+#### Large Language Models & Embeddings
+
+| Package | Version | Official Source | Role in This Project |
+|---|---|---|---|
+| `openai` | 1.25.0 | [pypi.org/project/openai](https://pypi.org/project/openai/) | Python SDK for OpenAI REST API; used for embeddings and chat completions |
+| `tiktoken` | 0.6.0 | [pypi.org/project/tiktoken](https://pypi.org/project/tiktoken/) | BPE tokenizer for accurate token counting and per-query cost attribution |
+| `sentence-transformers` | (transitive) | [pypi.org/project/sentence-transformers](https://pypi.org/project/sentence-transformers/) | `CrossEncoder` wrapper; loads `cross-encoder/ms-marco-MiniLM-L-6-v2` (~22 MB, CPU) |
+
+**Models used (downloaded at runtime, not packaged):**
+
+| Model ID | Provider | Size | Purpose |
+|---|---|---|---|
+| `text-embedding-3-small` | OpenAI | API | 1,536-dim dense embeddings for documents and queries |
+| `gpt-4-turbo-preview` | OpenAI | API | Grounded answer generation over retrieved context |
+| `cross-encoder/ms-marco-MiniLM-L-6-v2` | Hugging Face Hub | ~22 MB | Local CPU cross-encoder re-ranking of Top-K candidates |
+
+#### Vector Database
+
+| Package | Version | Official Source | Role in This Project |
+|---|---|---|---|
+| `pinecone-client` | 3.2.2 | [pypi.org/project/pinecone-client](https://pypi.org/project/pinecone-client/) | Serverless index management, upsert, hybrid query |
+| `pinecone-text` | 0.7.1 | [pypi.org/project/pinecone-text](https://pypi.org/project/pinecone-text/) | `BM25Encoder` — fits corpus and encodes sparse vectors for hybrid search |
+
+#### Evaluation
+
+| Package | Version | Official Source | Role in This Project |
+|---|---|---|---|
+| `ragas` | 0.1.7 | [pypi.org/project/ragas](https://pypi.org/project/ragas/) | LLM-as-a-judge metrics: Faithfulness, Answer Relevance, Context Precision, Context Recall |
+| `datasets` | 2.18.0 | [pypi.org/project/datasets](https://pypi.org/project/datasets/) | Constructs `Dataset` objects consumed by the RAGAs `evaluate()` function |
+
+#### Document Parsing
+
+| Package | Version | Official Source | Role in This Project |
+|---|---|---|---|
+| `pypdf` | 4.1.0 | [pypi.org/project/pypdf](https://pypi.org/project/pypdf/) | Extracts text from `.pdf` files in the ingestion pipeline |
+| `beautifulsoup4` | 4.12.3 | [pypi.org/project/beautifulsoup4](https://pypi.org/project/beautifulsoup4/) | Parses `.html` documents and strips markup tags |
+| `markdown` | 3.5.2 | [pypi.org/project/Markdown](https://pypi.org/project/Markdown/) | Converts Markdown syntax to structured text before chunking |
+| `python-magic` | 0.4.27 | [pypi.org/project/python-magic](https://pypi.org/project/python-magic/) | MIME-type detection for auto-routing files to the correct parser |
+
+#### Data & Numerics
+
+| Package | Version | Official Source | Role in This Project |
+|---|---|---|---|
+| `numpy` | 1.26.4 | [pypi.org/project/numpy](https://pypi.org/project/numpy/) | Vector arithmetic for MMR re-ranking (dot products, norms) |
+| `pandas` | 2.2.1 | [pypi.org/project/pandas](https://pypi.org/project/pandas/) | Tabular manipulation of batch evaluation results |
+| `python-dotenv` | 1.0.1 | [pypi.org/project/python-dotenv](https://pypi.org/project/python-dotenv/) | Loads `.env` file variables into the process environment |
+
+#### Observability
+
+| Package | Version | Official Source | Role in This Project |
+|---|---|---|---|
+| `prometheus-client` | 0.20.0 | [pypi.org/project/prometheus-client](https://pypi.org/project/prometheus-client/) | Exposes Counters, Histograms, and Gauges at `/metrics` for scraping |
+| `langsmith` | 0.1.52 | [pypi.org/project/langsmith](https://pypi.org/project/langsmith/) | Traces every LangChain invocation: prompts, completions, latency, token counts |
+| `opentelemetry-api` | 1.23.0 | [pypi.org/project/opentelemetry-api](https://pypi.org/project/opentelemetry-api/) | Distributed tracing API for pipeline stage instrumentation |
+| `opentelemetry-sdk` | 1.23.0 | [pypi.org/project/opentelemetry-sdk](https://pypi.org/project/opentelemetry-sdk/) | SDK implementation for span export and trace propagation |
+
+#### API & Web
+
+| Package | Version | Official Source | Role in This Project |
+|---|---|---|---|
+| `fastapi` | 0.110.1 | [pypi.org/project/fastapi](https://pypi.org/project/fastapi/) | Optional REST API layer for serving query and metrics endpoints |
+| `uvicorn` | 0.29.0 | [pypi.org/project/uvicorn](https://pypi.org/project/uvicorn/) | ASGI server that runs the FastAPI application |
+| `pydantic` | 2.7.0 | [pypi.org/project/pydantic](https://pypi.org/project/pydantic/) | Runtime data validation for request/response models and golden set schemas |
+| `pydantic-settings` | 2.2.1 | [pypi.org/project/pydantic-settings](https://pypi.org/project/pydantic-settings/) | Type-safe environment variable loading with `.env` fallback |
+
+#### Utilities
+
+| Package | Version | Official Source | Role in This Project |
+|---|---|---|---|
+| `tqdm` | 4.66.2 | [pypi.org/project/tqdm](https://pypi.org/project/tqdm/) | Progress bars for batch ingestion and evaluation loops |
+| `jsonlines` | 4.0.0 | [pypi.org/project/jsonlines](https://pypi.org/project/jsonlines/) | Reads and writes JSONL-formatted golden set files |
+| `pyyaml` | 6.0.1 | [pypi.org/project/PyYAML](https://pypi.org/project/PyYAML/) | Parses YAML configuration files in `configs/` |
+
+#### Development & Code Quality
+
+| Package | Version | Official Source | Role in This Project |
+|---|---|---|---|
+| `pytest` | 8.1.1 | [pypi.org/project/pytest](https://pypi.org/project/pytest/) | Unit and integration test runner |
+| `pytest-asyncio` | 0.23.6 | [pypi.org/project/pytest-asyncio](https://pypi.org/project/pytest-asyncio/) | Async test support for FastAPI and async pipeline components |
+| `pytest-cov` | 5.0.0 | [pypi.org/project/pytest-cov](https://pypi.org/project/pytest-cov/) | Test coverage measurement and HTML report generation |
+| `black` | 24.3.0 | [pypi.org/project/black](https://pypi.org/project/black/) | Opinionated code formatter enforcing consistent style |
+| `ruff` | 0.3.5 | [pypi.org/project/ruff](https://pypi.org/project/ruff/) | Fast Rust-based linter; replaces flake8, isort, and pyupgrade |
+
+---
+
+## Comparison with Existing Approaches
+
+The RAG ecosystem has several well-established frameworks and patterns. The table below positions this project against the most common alternatives across the dimensions that matter most in production deployments.
+
+### Framework Comparison
+
+| Dimension | Naive RAG | LlamaIndex | Haystack (deepset) | LangChain RetrievalQA | **This Project** |
+|---|---|---|---|---|---|
+| **Retrieval strategy** | Dense-only | Dense-only (default) | Hybrid (BM25 + dense) | Dense-only (default) | **Hybrid: dense + BM25, alpha-tunable** |
+| **Re-ranking** | None | Optional plug-in | Optional node post-processor | None by default | **Cross-encoder (ms-marco-MiniLM) + MMR** |
+| **Alpha tuning** | N/A | N/A | Manual | N/A | **Automated grid search on golden set** |
+| **Evaluation framework** | None | Built-in (basic) | Custom or DeepEval | None by default | **RAGAs: Faithfulness, Relevance, Precision, Recall** |
+| **CI/CD quality gate** | None | None | Custom scripting | None | **Exit-code gating + 5% regression detection** |
+| **Cost tracking** | None | None | None | None | **Per-query token counting via tiktoken** |
+| **Observability** | None | None | Elasticsearch logs | LangSmith (optional) | **Prometheus metrics + LangSmith tracing + OpenTelemetry** |
+| **Local compute required** | GPU (if local LLM) | GPU (if local LLM) | GPU (for local models) | GPU (if local LLM) | **CPU-only — cross-encoder is ~22 MB** |
+| **Vector database** | Varies | Varies (20+ options) | Elasticsearch / others | Varies (50+ options) | **Pinecone Serverless (no infra to manage)** |
+| **Setup complexity** | Low | Medium | High (Docker, pipelines) | Medium | **Low — CLI scripts, `.env` config, no Docker** |
+| **Chunking strategies** | Fixed size | Multiple | Multiple | Fixed size | **Recursive, Semantic (embedding-based), Markdown-aware** |
+| **Multi-tenancy** | None | Index-level | Index-level | None | **Pinecone namespace partitioning** |
+| **Golden set versioning** | None | None | None | None | **JSONL-based versioned QA pairs with schema validation** |
+
+### Where Each Approach Falls Short
+
+**Naive RAG (dense embedding + vector DB + LLM)**
+
+The most common pattern found in tutorials and quick prototypes. A single embedding model retrieves the Top-K chunks by cosine similarity, which are concatenated and passed to an LLM. The failure modes are well-documented: poor recall for keyword-heavy queries (e.g., exact API names, error codes), no re-ranking to prioritize the most relevant chunks within the retrieved set, and no evaluation layer — quality is assessed subjectively.
+
+**LlamaIndex**
+
+LlamaIndex (formerly GPT Index) provides a high-level abstraction layer over various vector stores and LLMs, making it accessible for prototyping. However, its default retrieval is dense-only. Hybrid search requires manually wiring in a separate retriever. Re-ranking is available as an optional module but not built into the standard pipeline. Its built-in evaluation tools are basic; production-grade metrics like Faithfulness and Context Precision require integrating a separate framework such as RAGAs anyway. There is no native cost tracking or Prometheus-compatible metrics export.
+
+**Haystack (by deepset)**
+
+Haystack is one of the most mature open-source NLP pipelines and does support hybrid retrieval via Elasticsearch's BM25 + dense combination. However, it carries significant operational overhead: it requires running Elasticsearch or OpenSearch locally or in Docker, which demands more RAM and infrastructure management. Haystack is well-suited for teams with existing Elastic infrastructure but introduces unnecessary complexity for a cloud-native, serverless deployment model. Its evaluation story also requires custom scripting or integration with external tools.
+
+**LangChain RetrievalQA (the "standard" LangChain RAG chain)**
+
+LangChain's `RetrievalQA` chain is the de facto starting point for LangChain-based RAG systems. It is straightforward to set up — a retriever, a prompt, and a chain — but it retrieves using a single embedding model with no sparse component, no re-ranking, and no evaluation pipeline. It is essentially the scaffolding that this project extends: the same LCEL composition pattern is used here, but layered with hybrid search, cross-encoder re-ranking, cost tracking, and RAGAs evaluation that `RetrievalQA` does not provide out of the box.
+
+**Azure AI Search + Azure OpenAI (managed enterprise RAG)**
+
+Microsoft's managed RAG stack integrates Azure AI Search (which supports hybrid BM25 + semantic re-ranking) with Azure OpenAI. It is feature-rich and enterprise-supported but introduces full vendor lock-in to the Azure ecosystem, making it difficult to swap embedding models, evaluation frameworks, or observability backends. Pricing is opaque and usage-based, with no per-query cost breakdown available to the application layer. This project provides equivalent hybrid retrieval and a richer evaluation framework while remaining cloud-agnostic and fully observable.
+
+### Key Differentiators of This Project
+
+1. **Hybrid retrieval is first-class, not an afterthought.** BM25 sparse vectors are generated at ingestion time alongside dense vectors, and the alpha blend is empirically optimized against the golden set — not set to an arbitrary default.
+
+2. **Quality is measurable and enforced.** Most RAG implementations have no automated evaluation. This project ships with a four-metric RAGAs evaluation suite wired into CI/CD, with regression detection that compares every run against a persisted baseline.
+
+3. **Cost is a first-class concern.** Every query produces a cost breakdown across embedding, generation, and retrieval using `tiktoken`-based exact token counts — not approximations. This enables informed decisions about model selection and prompt length.
+
+4. **Zero local infrastructure.** Unlike Haystack (which needs Elasticsearch) or self-hosted LLM setups (which need a GPU), the entire system runs on managed cloud services. The only local execution is a 22 MB CPU re-ranking model.
+
+5. **Observability is built in, not bolted on.** Prometheus metrics, LangSmith traces, and OpenTelemetry spans are instrumented throughout the pipeline from day one — not added as an afterthought when something breaks in production.
 
 ---
 
