@@ -70,3 +70,6 @@ models/
 
 # Documentation
 docs/_build/
+
+# Personal / Local Only
+INTERVIEW_PREP.md
